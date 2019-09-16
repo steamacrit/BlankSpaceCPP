@@ -63,6 +63,11 @@ void SwerveDriveSubsystem::InitDefaultCommand()
 
 }
 
+void  SwerveDriveSubsystem::ShieldWall()
+{
+    
+}
+
 void SwerveDriveSubsystem::SwerveDrive(double x, double y, double rot, double yaw, double percent_output)
 {
     switch (m_drive_mode)
@@ -75,13 +80,6 @@ void SwerveDriveSubsystem::SwerveDrive(double x, double y, double rot, double ya
     }
 
     Steer(x, y, rot);
-
-}
-
-double SimpleStaticPID(double angle)
-{
-    double ouptut = angle * 0.3;
-
 }
 
 void  SwerveDriveSubsystem::Steer(double x, double y, double rot)
@@ -116,13 +114,16 @@ void  SwerveDriveSubsystem::Steer(double x, double y, double rot)
 
         p_module->SetSteer(angle);
 
-        if (std::fabs(x) + std::fabs(y) + std::fabs(rot) == 0)
+        // Simple PID
+        double pid_value = angle * 0.3;
+
+        if (pid_value < 1.0 || std::fabs(x) + std::fabs(y) + std::fabs(rot) == 0)
         {
             speed = 0.0;
-            p_module->GetSteer()->Set(ControleMode::PercentOutput, 0.0);
+            p_module->GetSteer()->Set(ControlMode::PercentOutput, 0.0);
         }
         else
-            p_module->GetSteer()->Set(ControleMode::PercentOutput, p_module->GetPIDController()->Get());
+            p_module->GetSteer()->Set(ControlMode::PercentOutput, pid_value);
 
         if (p_module->IsInverted())
             speed = -speed;

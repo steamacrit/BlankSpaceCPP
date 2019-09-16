@@ -7,8 +7,9 @@
 
 #pragma once
 
-#include "subsystems/swerve_support/SteerEncoderPIDSource.h"
+#include <frc/PIDSubsystem.h>
 #include <ctre/Phoenix.h>
+#include "subsystems/swerve_support/SteerEncoderPIDSource.h"
 
 enum class SwerveModulePosition
 {
@@ -18,7 +19,7 @@ enum class SwerveModulePosition
     RightAft
 };
 
-class SwerveModule 
+class SwerveModule
 {
 public:
 	SwerveModule(
@@ -38,6 +39,7 @@ public:
     inline void SetSteer(double angle) { m_steer_encoder->SetTargetAngle(angle); }
     inline bool IsInverted() { return m_steer_encoder->IsInverted(); }
 	inline double GetSteerEncoderValue() { return m_steer_encoder->GetScaled(); }
+    inline double GetSteerPID() { return m_steer_encoder->PIDGet(); }
 
     inline void SetSteerEncoderCal(const double value) { m_steer_encoder->SetCalFactor(value); }
     inline const double GetSteerEncoderCal() const { return m_steer_encoder->GetCalFactor(); }

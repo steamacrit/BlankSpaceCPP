@@ -22,7 +22,9 @@ SwerveModule::SwerveModule(
     m_steer_pid_p = prefs->GetDouble("STEER_PID_P", 0.3);
     m_steer_pid_i = prefs->GetDouble("STEER_PID_I", 0.0);
     m_steer_pid_d = prefs->GetDouble("STEER_PID_I", 0.0);
-    PIDSubsystem(m_steer_pid_p, m_steer_pid_i, m_steer_pid_d);
+    //PIDSubsystem(m_steer_pid_p, m_steer_pid_i, m_steer_pid_d);
+    //SetPIDSourceType(PIDSourceType::kDisplacement);
+    
 
 	m_drive.reset(new TalonSRX(drive_controller_id));
 	

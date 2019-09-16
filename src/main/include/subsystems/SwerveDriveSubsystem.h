@@ -33,9 +33,12 @@ public:
 	static SwerveDriveSubsystem * GetInstance();
 	
 	void InitDefaultCommand() override;
+    
+    void ShieldWall();
 
     void SwerveDrive(double x, double y, double rot, double yaw, double percent_output = 1.0);
     void SetRotationPoint(double x, double y);
+
 
 private:
     std::vector<std::unique_ptr<SwerveModule>> m_swerve;
