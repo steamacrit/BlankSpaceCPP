@@ -24,12 +24,30 @@ class T34_XboxController : public frc::XboxController
 public: // PUBLIC METHODS
     T34_XboxController(int32_t port);
 
+	void SetAllAxisDeadband(double value);
     void SetAxisDeadband(frc::GenericHID::JoystickHand hand, AxisType axis, double value);
 
     double GetXDB(frc::GenericHID::JoystickHand hand) const;
     double GetYDB(frc::GenericHID::JoystickHand hand) const;
     double GetTriggerDB(frc::GenericHID::JoystickHand hand) const;
-
+	double GetTriggersCoercedDB() const;
+	
+	inline double GetLeftStickXDB() const   { return GetXDB(frc::GenericHID::JoystickHand::kLeftHand); }
+	inline double GetLeftStickYDB() const   { return GetYDB(frc::GenericHID::JoystickHand::kLeftHand); }
+	inline double GetRightStickXDB() const  { return GetXDB(frc::GenericHID::JoystickHand::kRightHand); }
+	inline double GetRightStickYDB() const  { return GetYDB(frc::GenericHID::JoystickHand::kRightHand); }
+	inline double GetLeftTriggerDB() const  { return GetTriggerDB(frc::GenericHID::JoystickHand::kLeftHand); }
+	inline double GetRightTriggerDB() const { return GetTriggerDB(frc::GenericHID::JoystickHand::kRightHand); }
+	
+	inline bool GetLeftStickPressed()       { return GetStickButtonPressed(frc::GenericHID::JoystickHand::kLeftHand); }
+	inline bool GetLeftStickReleased()      { return GetStickButtonReleased(frc::GenericHID::JoystickHand::kLeftHand); }
+	inline bool GetRightStickPressed()      { return GetStickButtonPressed(frc::GenericHID::JoystickHand::kRightHand); }
+	inline bool GetRightStickReleased()     { return GetStickButtonReleased(frc::GenericHID::JoystickHand::kRightHand); }
+	inline bool GetLeftBumperPressed()      { return GetBumperPressed(frc::GenericHID::JoystickHand::kLeftHand); }
+	inline bool GetLeftBumperReleased()     { return GetBumperReleased(frc::GenericHID::JoystickHand::kLeftHand); }
+	inline bool GetRightBumperPressed()     { return GetBumperPressed(frc::GenericHID::JoystickHand::kRightHand); }
+	inline bool GetRightBumperReleased()    { return GetBumperReleased(frc::GenericHID::JoystickHand::kRightHand); }
+	
 private: //PRIVATE DATA
     double m_left_x_db;
     double m_left_y_db;

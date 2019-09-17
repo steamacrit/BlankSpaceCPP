@@ -6,8 +6,9 @@
 /*----------------------------------------------------------------------------*/
 
 #include "subsystems/swerve_support/SteerEncoderPIDSource.h"
+#include <frc/smartdashboard/SmartDashboard.h>
 
-constexpr double SCALE_FACTOR = 360 / 4096;
+constexpr double SCALE_FACTOR = 360.0 / 4096.0;
 
 SteerEncoderPIDSource::SteerEncoderPIDSource(uint32_t steer_encoder_id) 
     : frc::AnalogInput(steer_encoder_id)
@@ -21,7 +22,7 @@ SteerEncoderPIDSource::SteerEncoderPIDSource(uint32_t steer_encoder_id)
 
 double SteerEncoderPIDSource::PIDGet()
 {
-    double target_al = AnalogInput::GetValue() * SCALE_FACTOR;
+    double target_al = ((double)GetValue()) * SCALE_FACTOR;
 
     if (m_use_cal_factor)
     {
@@ -47,12 +48,13 @@ double SteerEncoderPIDSource::PIDGet()
     else
         m_inverted = true;
 
+    frc::SmartDashboard::PutNumber("PV", pv);
     return pv;
 }
 
 double SteerEncoderPIDSource::GetScaled()
 {
-    double output = AnalogInput::GetValue() * SCALE_FACTOR;
+    double output = ((double)GetValue()) * SCALE_FACTOR;
 
     if (m_use_cal_factor)
     {
@@ -70,4 +72,9 @@ void SteerEncoderPIDSource::SetCalFactor(double factor)
         m_use_cal_factor = true;
 
     m_cal_factor = factor;
+}
+
+void SteerEncoderPIDSource::Calibrate()
+{
+    SetCalFactor(GetValue() * SCALE_FACTOR);
 }

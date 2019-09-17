@@ -7,7 +7,8 @@
 
 #pragma once
 
-#include <frc/PIDSubsystem.h>
+#include <frc/PIDController.h>
+#include <frc/PIDOutput.h>
 #include <ctre/Phoenix.h>
 #include "subsystems/swerve_support/SteerEncoderPIDSource.h"
 
@@ -19,7 +20,7 @@ enum class SwerveModulePosition
     RightAft
 };
 
-class SwerveModule
+class SwerveModule : public frc::PIDOutput
 {
 public:
 	SwerveModule(
@@ -34,9 +35,10 @@ public:
 	inline TalonSRX * GetDrive() { return m_drive.get(); }
 //	inline T34_Encoder * GetDriveEncoder() { return m_drive_encoder.get(); }
 	
-	inline TalonSRX * GetSteer() { return m_steer.get(); }
+	inline TalonSRX * GetSteerMotor() { return m_steer_motor.get(); }
 	inline SteerEncoderPIDSource * GetSteerEncoder() { return m_steer_encoder.get(); }
-    inline void SetSteer(double angle) { m_steer_encoder->SetTargetAngle(angle); }
+    void SetSteerAngle(double angle);
+	
     inline bool IsInverted() { return m_steer_encoder->IsInverted(); }
 	inline double GetSteerEncoderValue() { return m_steer_encoder->GetScaled(); }
     inline double GetSteerPID() { return m_steer_encoder->PIDGet(); }
@@ -46,6 +48,9 @@ public:
 
     inline void SetDriveSpeed(double speed) { m_drive->Set(ControlMode::PercentOutput, speed); }
 	
+	void PIDWrite(double output) override;
+	
+    void Calibrate();
     void LoadCalibration();
     void SaveCalibration();
 
@@ -53,13 +58,14 @@ private:
     SwerveModulePosition m_module_position;
 
 	std::unique_ptr<TalonSRX> m_drive;
-//	std::unique_ptr<T34_Encoder> m_drive_encoder;
 	
-	std::unique_ptr<TalonSRX> m_steer;
+	std::unique_ptr<TalonSRX> m_steer_motor;
 	std::unique_ptr<SteerEncoderPIDSource> m_steer_encoder;
 
+	std::unique_ptr<frc::PIDController> m_pid;
+	
+    double m_pid_output;
     double m_steer_pid_p;
     double m_steer_pid_i;
     double m_steer_pid_d;
-//    double m_steer_angle;
 };

@@ -7,7 +7,16 @@
 
 #pragma once
 
-class OI {
- public:
-  OI();
+#include "utils/T34_XboxController.h"
+
+class OI 
+{
+public:
+	static OI * GetInstance();
+	
+	std::shared_ptr<T34_XboxController> DRIVER_CTRL;
+	std::shared_ptr<T34_XboxController> OPERATOR_CTRL;
+	
+private:
+	OI();
 };

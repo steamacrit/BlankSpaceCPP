@@ -23,7 +23,7 @@ public:
 
     void SetCalFactor(double factor);
     inline const double GetCalFactor() const { return m_cal_factor; }
-
+    void Calibrate();
 private:
     bool m_inverted;
     double m_target_angle;

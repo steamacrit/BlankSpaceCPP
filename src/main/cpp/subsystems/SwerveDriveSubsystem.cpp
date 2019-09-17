@@ -3,6 +3,8 @@
 #include "RobotMap.h"
 #include <cmath>
 
+#include <frc/smartdashboard/SmartDashboard.h>
+
 constexpr double PI{ 3.14159265359 };
 constexpr double RAD1{ 180 / PI };
 
@@ -17,29 +19,9 @@ void sincosf(const double angle, double * sin_angle, double * cos_angle)
     *cos_angle = cosf(angle);
 }
 
-/**
- * SWERVE MODULE
- **/
-
- 
- 
-/**
- * SWERVE DRIVE
- **/
-std::unique_ptr<SwerveDriveSubsystem> g_swerve_drive{ nullptr };
-
-SwerveDriveSubsystem * SwerveDriveSubsystem::GetInstance()
-{
-	if (g_swerve_drive == nullptr)
-		g_swerve_drive.reset(new SwerveDriveSubsystem());
-		
-	return g_swerve_drive.get();
-}
-
 SwerveDriveSubsystem::SwerveDriveSubsystem()
 	: frc::Subsystem("SwerveDriveSubsystem")
-	, m_drive_mode(DriveMode::RobotCentric)
-	, m_speed_mode(SpeedMode::Full)
+	, m_drive_mode(SwerveDriveMode::FieldCentric)
     , m_xrot_pt(0.0)
     , m_yrot_pt(0.0)
 {
@@ -60,35 +42,142 @@ SwerveDriveSubsystem::SwerveDriveSubsystem()
 
 void SwerveDriveSubsystem::InitDefaultCommand()
 {
-
+	
 }
 
 void  SwerveDriveSubsystem::ShieldWall()
 {
-    
+	for (size_t i = 0; i < m_swerve.size(); i++)
+	{
+		SwerveModule * p_module = m_swerve[i].get();
+		switch (p_module->GetModulePosition())
+		{
+			case SwerveModulePosition::LeftForward:
+				p_module->SetSteerAngle(-45.0);
+				break;
+			case SwerveModulePosition::RightForward:
+				p_module->SetSteerAngle(45.0);
+				break;     
+			case SwerveModulePosition::LeftAft:
+				p_module->SetSteerAngle(45.0);
+				break;  
+			case SwerveModulePosition::RightAft:
+				p_module->SetSteerAngle(-45.0);
+				break;  
+			default:
+				return;
+		}
+		
+		p_module->SetDriveSpeed(0.0);
+	}
+}
+
+void SwerveDriveSubsystem::TankDrive(double left, double right)
+{
+	for (size_t i = 0; i < m_swerve.size(); i++)
+	{
+		SwerveModule * p_module = m_swerve[i].get();
+		switch (p_module->GetModulePosition())
+		{
+			case SwerveModulePosition::LeftForward:
+				p_module->SetSteerAngle(0.0);
+				p_module->SetDriveSpeed(left);
+				break;
+			case SwerveModulePosition::RightForward:
+				p_module->SetSteerAngle(0.0);
+				p_module->SetDriveSpeed(right);
+				break;     
+			case SwerveModulePosition::LeftAft:
+				p_module->SetSteerAngle(0.0);
+				p_module->SetDriveSpeed(left);
+				break;  
+			case SwerveModulePosition::RightAft:
+				p_module->SetSteerAngle(0.0);
+				p_module->SetDriveSpeed(right);
+				break;  
+			default:
+				return;
+		}
+	}
+}
+
+void SwerveDriveSubsystem::CarDrive(double x, double y, double percent_output)
+{
+    for (size_t i = 0; i < m_swerve.size(); i++)
+    {
+        double angle{ 0.0 };
+        double speed{ 0.0 };
+
+        SwerveModule * p_module = m_swerve[i].get();
+
+        switch (p_module->GetModulePosition())
+        {
+            case SwerveModulePosition::LeftForward:
+                TargetAngleAndSpeed(x, y, 0.0, DRIVE_BASE_LENGTH_HAVLED, -DRIVE_BASE_WIDTH_HALVED,
+                    &angle, &speed);
+				if (angle < -75.0) angle = -75.0;
+				if (angle > 75.0) angle = 75.0;
+				p_module->SetSteerAngle(angle);
+                break;
+            case SwerveModulePosition::RightForward:
+                TargetAngleAndSpeed(x, y, 0.0, -DRIVE_BASE_LENGTH_HAVLED, -DRIVE_BASE_WIDTH_HALVED,
+                    &angle, &speed);
+				if (angle < -75.0) angle = -75.0;
+				if (angle > 75.0) angle = 75.0;
+				p_module->SetSteerAngle(angle);
+                break;     
+            case SwerveModulePosition::LeftAft:
+				p_module->SetSteerAngle(0.0);
+                break;  
+            case SwerveModulePosition::RightAft:
+				p_module->SetSteerAngle(0.0);
+                break;  
+            default:
+                return;
+        }
+
+
+        if (p_module->IsInverted())
+            speed = -speed;
+
+        if (percent_output < 1.0 && percent_output > 0.0)
+                p_module->SetDriveSpeed(speed * percent_output);
+        else
+            for (size_t i = 0; i < m_swerve.size(); i++)
+               p_module->SetDriveSpeed(speed);            
+    }
 }
 
 void SwerveDriveSubsystem::SwerveDrive(double x, double y, double rot, double yaw, double percent_output)
 {
     switch (m_drive_mode)
     {
-        case DriveMode::RobotCentric:
+        case SwerveDriveMode::RobotCentric:
             RotateAngle(x, y, yaw);
             break;
         default:
             RotateAngle(x, y, 0.0);
     }
 
-    Steer(x, y, rot);
+    SwerveSteer(x, y, rot);
 }
 
-void  SwerveDriveSubsystem::Steer(double x, double y, double rot)
+void  SwerveDriveSubsystem::SwerveSteer(double x, double y, double rot, double percent_output)
 {
+
+
     for (size_t i = 0; i < m_swerve.size(); i++)
     {
         double angle{ 0.0 };
         double speed{ 0.0 };
         SwerveModule * p_module = m_swerve[i].get();
+
+        if (x == 0.0 && y == 0.0 && rot == 0.0)
+        {
+            p_module->GetDrive()->Set(ControlMode::PercentOutput, 0.0);
+            p_module->GetSteerMotor()->Set(ControlMode::PercentOutput, 0.0);
+            continue;
+        }
 
         switch (p_module->GetModulePosition())
         {
@@ -112,27 +201,15 @@ void  SwerveDriveSubsystem::Steer(double x, double y, double rot)
                 return;
         }
 
-        p_module->SetSteer(angle);
-
-        // Simple PID
-        double pid_value = angle * 0.3;
-
-        if (pid_value < 1.0 || std::fabs(x) + std::fabs(y) + std::fabs(rot) == 0)
-        {
-            speed = 0.0;
-            p_module->GetSteer()->Set(ControlMode::PercentOutput, 0.0);
-        }
-        else
-            p_module->GetSteer()->Set(ControlMode::PercentOutput, pid_value);
+        p_module->SetSteerAngle(angle);
 
         if (p_module->IsInverted())
             speed = -speed;
 
         if (percent_output < 1.0 && percent_output > 0.0)
-                p_module->SetDriveSpeed(speed * percent_output);
+            p_module->SetDriveSpeed(speed * percent_output);
         else
-            for (size_t i = 0; i < m_swerve.size(); i++)
-               p_module->SetDriveSpeed(speed);            
+            p_module->SetDriveSpeed(speed);            
     }
 }
 
@@ -169,3 +246,16 @@ void SwerveDriveSubsystem::TargetAngleAndSpeed(double x, double y, double rot, d
         *speed /= std::fabs(*speed);
 }
 
+void SwerveDriveSubsystem::CalibrateEncoders()
+{
+    for (size_t i = 0; i < m_swerve.size(); i++)
+        m_swerve[i]->Calibrate();
+}
+
+void SwerveDriveSubsystem::ShowEncoders()
+{
+    frc::SmartDashboard::PutNumber("LF ENC", m_swerve[0]->GetSteerEncoderValue());
+    frc::SmartDashboard::PutNumber("LA ENC", m_swerve[1]->GetSteerEncoderValue());
+    frc::SmartDashboard::PutNumber("RF ENC", m_swerve[2]->GetSteerEncoderValue());
+    frc::SmartDashboard::PutNumber("RA ENC", m_swerve[3]->GetSteerEncoderValue());
+}

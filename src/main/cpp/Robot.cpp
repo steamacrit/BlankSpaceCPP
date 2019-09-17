@@ -6,17 +6,23 @@
 /*----------------------------------------------------------------------------*/
 
 #include "Robot.h"
-
+#include "RobotMap.h"
 #include <frc/commands/Scheduler.h>
 #include <frc/smartdashboard/SmartDashboard.h>
+#include <frc/livewindow/LiveWindow.h>
 
 ExampleSubsystem Robot::m_subsystem;
-OI Robot::m_oi;
+SwerveDriveSubsystem Robot::m_drive_subsystem;
 
-void Robot::RobotInit() {
-  m_chooser.SetDefaultOption("Default Auto", &m_defaultAuto);
-  m_chooser.AddOption("My Auto", &m_myAuto);
-  frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
+void Robot::RobotInit() 
+{
+	m_chooser.SetDefaultOption("Default Auto", &m_defaultAuto);
+	m_chooser.AddOption("My Auto", &m_myAuto);
+	frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
+	
+	m_drive_ctrl.reset(new T34_XboxController(RobotMap::DRIVER_CTRL_PORT));
+	m_ahrs.reset(new AHRS(SPI::Port::kMXP));
+	//frc::LiveWindow::GetInstance()->AddSensor("IMU", "Gyro", m_ahrs);
 }
 
 /**
@@ -76,9 +82,80 @@ void Robot::TeleopInit() {
     m_autonomousCommand->Cancel();
     m_autonomousCommand = nullptr;
   }
+	
+	
 }
 
-void Robot::TeleopPeriodic() { frc::Scheduler::GetInstance()->Run(); }
+void Robot::TeleopPeriodic() 
+{ 
+	frc::Scheduler::GetInstance()->Run(); 
+	
+    m_drive_subsystem.ShowEncoders();
+    
+    if (m_drive_ctrl->GetLeftBumperPressed())
+        m_drive_subsystem.CalibrateEncoders();
+	if (m_drive_ctrl->GetBackButtonPressed())
+	{
+		m_ahrs->ZeroYaw();
+	}
+	if (m_drive_ctrl->GetStartButtonPressed())
+	{
+		if (m_drive_subsystem.GetSwerveDriveMode() == SwerveDriveMode::RobotCentric)
+		{
+			m_drive_subsystem.SetSwerveDriveMode(SwerveDriveMode::FieldCentric);
+			frc::SmartDashboard::PutString("Swerve Mode", "Field Centric");
+		}
+		else
+		{
+			m_drive_subsystem.SetSwerveDriveMode(SwerveDriveMode::RobotCentric);
+			frc::SmartDashboard::PutString("Swerve Mode", "Robot Centric");
+		}
+	}
+	if (m_drive_ctrl->GetAButtonPressed())
+	{
+		m_drive_mode = DriveMode::Tank;
+		frc::SmartDashboard::PutString("Drive Mode", "Tank Drive");
+	}
+	if (m_drive_ctrl->GetBButtonPressed())
+	{
+		m_drive_mode = DriveMode::Swerve;
+		frc::SmartDashboard::PutString("Drive Mode", "Swerve Drive");
+	}
+	if (m_drive_ctrl->GetYButtonPressed())
+	{
+		m_drive_mode = DriveMode::Car;
+		frc::SmartDashboard::PutString("Drive Mode", "Car Drive");
+	}
+	if (m_drive_ctrl->GetXButtonPressed())
+	{
+		m_drive_subsystem.ShieldWall();
+		frc::SmartDashboard::PutString("Drive Mode", "Shield Wall");
+		return;
+	}
+	
+    double lx = m_drive_ctrl->GetLeftStickXDB();
+    double ly = m_drive_ctrl->GetLeftStickYDB();
+    double ry = m_drive_ctrl->GetRightStickYDB();
+    double tr = m_drive_ctrl->GetTriggersCoercedDB();
+	switch (m_drive_mode)
+	{
+		case DriveMode::Tank:
+			m_drive_subsystem.TankDrive(ly, ry);
+			break;
+		case DriveMode::Car:
+			m_drive_subsystem.CarDrive(lx, ly);
+			break;
+		case DriveMode::Swerve:
+        {
+            double yaw = m_ahrs->GetAngle();
+            frc::SmartDashboard::PutNumber("CPP Yaw", yaw);
+			m_drive_subsystem.SwerveDrive(lx, ly, tr, yaw);
+        }
+			break;
+		default:
+			return;
+	}
+}
 
 void Robot::TestPeriodic() {}
 

@@ -20,6 +20,19 @@ T34_XboxController::T34_XboxController(int32_t port)
 
 }
 
+void T34_XboxController::SetAllAxisDeadband(double value)
+{
+	if (value < 1.0 && value >= 0.0)
+	{
+		m_left_x_db = value;
+		m_left_y_db = value;
+		m_right_x_db = value;
+		m_right_y_db = value;
+		m_left_trigger_db = value;
+		m_right_trigger_db = value;
+	}
+}
+
 // Sets a deadband range for a given axis of the controller
 void T34_XboxController::SetAxisDeadband(frc::GenericHID::JoystickHand hand, AxisType axis, double value)
 {
@@ -98,3 +111,9 @@ double T34_XboxController::GetTriggerDB(frc::GenericHID::JoystickHand hand) cons
 
     return value;
 }
+
+double T34_XboxController::GetTriggersCoercedDB() const
+{
+	return GetLeftTriggerDB() + GetRightTriggerDB();
+}
+
