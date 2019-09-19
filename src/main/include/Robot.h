@@ -10,27 +10,25 @@
 #include <frc/TimedRobot.h>
 #include <frc/commands/Command.h>
 #include <frc/smartdashboard/SendableChooser.h>
-#include <AHRS.h>
 
-#include "OI.h"
 #include "commands/ExampleCommand.h"
 #include "commands/MyAutoCommand.h"
 #include "subsystems/ExampleSubsystem.h"
-#include "subsystems/SwerveDriveSubsystem.h"
+#include "subsystems/DriveSubsystem.h"
 #include "utils/T34_XboxController.h"
 
 enum class DriveMode
 {
+    SwerveFieldOriented,
+	SwerveRobotCentric,
 	Tank,
-	Car,
-	Swerve
+	Car
 };
 
 class Robot : public frc::TimedRobot {
 public:
-	static SwerveDriveSubsystem m_drive_subsystem;
+	static DriveSubsystem m_drive_subsystem;
 	static ExampleSubsystem m_subsystem;
-	static OI m_oi;
 
 	void RobotInit() override;
 	void RobotPeriodic() override;
@@ -50,8 +48,6 @@ private:
 	MyAutoCommand m_myAuto;
 	frc::SendableChooser<frc::Command*> m_chooser;
 
-
-	std::unique_ptr<AHRS> m_ahrs;
 	std::unique_ptr<T34_XboxController> m_drive_ctrl;
 	DriveMode m_drive_mode;
 

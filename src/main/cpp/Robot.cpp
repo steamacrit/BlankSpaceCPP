@@ -12,7 +12,7 @@
 #include <frc/livewindow/LiveWindow.h>
 
 ExampleSubsystem Robot::m_subsystem;
-SwerveDriveSubsystem Robot::m_drive_subsystem;
+DriveSubsystem Robot::m_drive_subsystem;
 
 void Robot::RobotInit() 
 {
@@ -21,8 +21,10 @@ void Robot::RobotInit()
 	frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
 	
 	m_drive_ctrl.reset(new T34_XboxController(RobotMap::DRIVER_CTRL_PORT));
-	m_ahrs.reset(new AHRS(SPI::Port::kMXP));
-	//frc::LiveWindow::GetInstance()->AddSensor("IMU", "Gyro", m_ahrs);
+
+    m_drive_mode = DriveMode::SwerveFieldOriented;
+    m_drive_subsystem.SetSwerveDriveMode(SwerveDriveMode::FieldOriented);
+    frc::SmartDashboard::PutString("Drive Mode", "FieldOriented");
 }
 
 /**
@@ -90,42 +92,54 @@ void Robot::TeleopPeriodic()
 { 
 	frc::Scheduler::GetInstance()->Run(); 
 	
-    m_drive_subsystem.ShowEncoders();
-    
+    // While left bumper is pressed the drive speed will be scaled by 1.7.
+    // While the right bumper is pressed the drive speed will be scailed by 1.3.
+    // When the pressed bumper is released, the drive speed will no longer be scaled (1.0).
     if (m_drive_ctrl->GetLeftBumperPressed())
-        m_drive_subsystem.CalibrateEncoders();
-	if (m_drive_ctrl->GetBackButtonPressed())
+        m_drive_subsystem.SetSpeedScale(1.7);
+    else if (m_drive_ctrl->GetRightBumperPressed())
+        m_drive_subsystem.SetSpeedScale(1.3);
+    else
+        m_drive_subsystem.SetSpeedScale(1.0);
+
+    // Pressing the "back" button cycles through the four drive modes
+    //  1. SwerveFieldOriented (default)
+    //  2. SwerveRobotCentric
+    //  3. Tank
+    //  4. Car
+    if (m_drive_ctrl->GetBackButtonReleased())
 	{
-		m_ahrs->ZeroYaw();
-	}
-	if (m_drive_ctrl->GetStartButtonPressed())
-	{
-		if (m_drive_subsystem.GetSwerveDriveMode() == SwerveDriveMode::RobotCentric)
-		{
-			m_drive_subsystem.SetSwerveDriveMode(SwerveDriveMode::FieldCentric);
-			frc::SmartDashboard::PutString("Swerve Mode", "Field Centric");
-		}
-		else
-		{
-			m_drive_subsystem.SetSwerveDriveMode(SwerveDriveMode::RobotCentric);
-			frc::SmartDashboard::PutString("Swerve Mode", "Robot Centric");
-		}
-	}
-	if (m_drive_ctrl->GetAButtonPressed())
-	{
-		m_drive_mode = DriveMode::Tank;
-		frc::SmartDashboard::PutString("Drive Mode", "Tank Drive");
-	}
-	if (m_drive_ctrl->GetBButtonPressed())
-	{
-		m_drive_mode = DriveMode::Swerve;
-		frc::SmartDashboard::PutString("Drive Mode", "Swerve Drive");
-	}
-	if (m_drive_ctrl->GetYButtonPressed())
-	{
-		m_drive_mode = DriveMode::Car;
-		frc::SmartDashboard::PutString("Drive Mode", "Car Drive");
-	}
+        switch (m_drive_mode)
+        {
+            case DriveMode::SwerveFieldOriented:
+                m_drive_mode = DriveMode::SwerveRobotCentric;
+                m_drive_subsystem.SetSwerveDriveMode(SwerveDriveMode::RobotCentric);
+                frc::SmartDashboard::PutString("Drive Mode", "RobotCentric");
+                break;
+            case DriveMode::SwerveRobotCentric:
+                m_drive_mode = DriveMode::Tank;
+                frc::SmartDashboard::PutString("Drive Mode", "Tank");
+                break;
+            case DriveMode::Tank:
+                m_drive_mode = DriveMode::Car;
+                frc::SmartDashboard::PutString("Drive Mode", "Car");
+                break;
+            case DriveMode::Car:
+                m_drive_mode = DriveMode::SwerveFieldOriented;
+                m_drive_subsystem.SetSwerveDriveMode(SwerveDriveMode::FieldOriented);
+                frc::SmartDashboard::PutString("Drive Mode", "FieldOriented");
+                break;
+            default:
+                m_drive_mode = DriveMode::SwerveFieldOriented;
+                m_drive_subsystem.SetSwerveDriveMode(SwerveDriveMode::FieldOriented);            
+                frc::SmartDashboard::PutString("Drive Mode", "FieldOriented");
+        }
+    }
+
+    // If the X Button is pressed, all drive motors outputs will be set to 0.0 and the 
+    // four wheels will be oriented outward at a 45.0 degree angle. This is primary for defense 
+    // and should make it harder for other robots to push use off target or out of the way 
+    // when we are attempting to block them.
 	if (m_drive_ctrl->GetXButtonPressed())
 	{
 		m_drive_subsystem.ShieldWall();
@@ -133,27 +147,26 @@ void Robot::TeleopPeriodic()
 		return;
 	}
 	
-    double lx = m_drive_ctrl->GetLeftStickXDB();
-    double ly = m_drive_ctrl->GetLeftStickYDB();
-    double ry = m_drive_ctrl->GetRightStickYDB();
-    double tr = m_drive_ctrl->GetTriggersCoercedDB();
+    double right_stick_x = m_drive_ctrl->GetRightStickXDB();
 	switch (m_drive_mode)
 	{
+        case DriveMode::SwerveFieldOriented:
+        case DriveMode::SwerveRobotCentric:
+            // Note that that in swerve mode, either the triggers (left & right) or the 
+            // right stick (x-axis) can be used to cause the robot to rotate.
+            // The right stick has priority meaning that if there is an input detected
+            // from the right stick then the triggers are ignored and the right stick is used.
+            m_drive_subsystem.SwerveDrive(m_drive_ctrl->GetLeftStickXDB(), m_drive_ctrl->GetLeftStickYDB(),
+                right_stick_x == 0.0 ? right_stick_x : m_drive_ctrl->GetTriggersCoercedDB());
+            break;
 		case DriveMode::Tank:
-			m_drive_subsystem.TankDrive(ly, ry);
+			m_drive_subsystem.TankDrive(m_drive_ctrl->GetLeftStickYDB(), m_drive_ctrl->GetRightStickYDB());
 			break;
 		case DriveMode::Car:
-			m_drive_subsystem.CarDrive(lx, ly);
-			break;
-		case DriveMode::Swerve:
-        {
-            double yaw = m_ahrs->GetAngle();
-            frc::SmartDashboard::PutNumber("CPP Yaw", yaw);
-			m_drive_subsystem.SwerveDrive(lx, ly, tr, yaw);
-        }
+			m_drive_subsystem.CarDrive(m_drive_ctrl->GetLeftStickYDB(), m_drive_ctrl->GetLeftStickXDB());
 			break;
 		default:
-			return;
+			m_drive_subsystem.StopDriveMotors();
 	}
 }
 

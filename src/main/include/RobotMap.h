@@ -3,22 +3,29 @@
 class RobotMap
 {
 public:
-	static constexpr uint32_t LEFT_FWD_DRIVE_CTRL{ 1 };
-	static constexpr uint32_t LEFT_FWD_STEER_CTRL{ 5 };
+	static constexpr uint32_t LEFT_FWD_DRIVE_MOTOR{ 1 };
+	static constexpr uint32_t LEFT_FWD_STEER_MOTOR{ 5 };
 	static constexpr uint32_t LEFT_FWD_STEER_ENCODER{ 0 };
 
-	static constexpr uint32_t LEFT_AFT_DRIVE_CTRL{ 0 };
-	static constexpr uint32_t LEFT_AFT_STEER_CTRL{ 4 };
+	static constexpr uint32_t LEFT_AFT_DRIVE_MOTOR{ 0 };
+	static constexpr uint32_t LEFT_AFT_STEER_MOTOR{ 4 };
 	static constexpr uint32_t LEFT_AFT_STEER_ENCODER{ 2 };
 
-	static constexpr uint32_t RIGHT_FWD_DRIVE_CTRL{ 2 };
-	static constexpr uint32_t RIGHT_FWD_STEER_CTRL{ 7 };
+	static constexpr uint32_t RIGHT_FWD_DRIVE_MOTOR{ 2 };
+	static constexpr uint32_t RIGHT_FWD_STEER_MOTOR{ 7 };
 	static constexpr uint32_t RIGHT_FWD_STEER_ENCODER{ 1 };
 
-	static constexpr uint32_t RIGHT_AFT_DRIVE_CTRL{ 3 };
-	static constexpr uint32_t RIGHT_AFT_STEER_CTRL{ 6 };
+	static constexpr uint32_t RIGHT_AFT_DRIVE_MOTOR{ 3 };
+	static constexpr uint32_t RIGHT_AFT_STEER_MOTOR{ 6 };
 	static constexpr uint32_t RIGHT_AFT_STEER_ENCODER{ 3 };
 	
 	static constexpr uint32_t DRIVER_CTRL_PORT{ 0 };
 	static constexpr uint32_t OPERATOR_CTRL_PORT{ 1 };
+	
+	
+	static constexpr double DRIVE_BASE_WIDTH { 25.0 };
+	static constexpr double DRIVE_BASE_WIDTH_HALVED { DRIVE_BASE_WIDTH / 2.0 };
+
+	static constexpr double DRIVE_BASE_LENGTH { 25.0 };
+	static constexpr double DRIVE_BASE_LENGTH_HAVLED { DRIVE_BASE_LENGTH / 2.0 };
 };
