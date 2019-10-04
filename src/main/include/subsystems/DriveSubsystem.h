@@ -1,52 +1,9 @@
 #pragma once
 
-#include <frc/PIDController.h>
-#include <frc/AnalogInput.h>
 #include <frc/commands/Subsystem.h>
-
 #include <AHRS.h>
 
-#include <ctre/Phoenix.h>
-#include "subsystems/support/TalonSRX_PID.h"
-
-// Enumeration used to drive orientation
-enum class SwerveDriveMode
-{
-	RobotCentric,
-	FieldOriented
-};
-
-// Structure used to hold various data of type double for each individual swerve drive module
-struct DriveValues
-{
-	double lf{ 0.0 };
-	double la{ 0.0 };
-	double rf{ 0.0 };
-	double ra{ 0.0 };
-};
-
-// Convenience class for managing each swerve drive module separately
-class DriveModule
-{
-public:
-	DriveModule(uint32_t drive_motor_id, uint32_t steer_motor_id, uint32_t steer_encoder_id);
-	
-	void Drive(double speed, double angle);
-	
-	void Steer(double angle);
-	void SetMotorPercentOutput(double output);
-	
-	inline TalonSRX * GetDriveMotor() { return m_drive_motor.get(); }
-	inline TalonSRX * GetSteerMotor() { return m_steer_motor.get(); }
-	inline frc::AnalogInput * GetSteerEncoder() { return m_steer_encoder.get(); }
-	inline double GetSteerEncoderValue() { return m_steer_encoder->GetValue(); }
-
-private: // PRIVATE DATA
-	std::unique_ptr<TalonSRX> m_drive_motor;
-	std::unique_ptr<TalonSRX_PID> m_steer_motor;
-	std::unique_ptr<frc::AnalogInput> m_steer_encoder;
-	std::unique_ptr<frc::PIDController> m_pid;
-};
+#include "subsystems/support/SwerveModule.h"
 
 
 // DriveSubsystem
@@ -88,20 +45,24 @@ public: // PUBLIC METHODS
 
 private: // PRIVATE DATA
     // Pointers to the four swerve drive modules.
-    std::unique_ptr<DriveModule> m_left_fwd_module;
-    std::unique_ptr<DriveModule> m_left_aft_module;
-    std::unique_ptr<DriveModule> m_right_fwd_module;
-    std::unique_ptr<DriveModule> m_right_aft_module;
+    std::vector<std::unique_ptr<SwerveModule>> m_swerve_modules;
+    SwerveModule * m_left_fwd_module;
+    SwerveModule * m_left_aft_module;
+    SwerveModule * m_right_fwd_module;
+    SwerveModule * m_right_aft_module;
     
     // Pointer to access navX functionality
 	std::unique_ptr<AHRS> m_ahrs;
-	
-    // Internal method for calculating the drive speeds and wheel angles for all swerve modules.
-	void SpeedAndAngle(double x, double y, double rot, DriveValues * speeds, DriveValues * angles);
 	
     // Used to scale the drive speeds for a drive modes.
 	double m_speed_scale;
 
     // Stores the current swerve drive mode (RobotCentric or FieldOriented).
 	SwerveDriveMode m_drive_mode;
+
+private: // PRIVATE METHODS
+    void InitializeSwerveModule(SwerveModulePosition position, 
+        uint32_t drive_motor_id, uint32_t steer_motor_id, uint32_t steer_encoder_id);
+
+    void NormalizeOutput(DriveValues<double> & output);
 };

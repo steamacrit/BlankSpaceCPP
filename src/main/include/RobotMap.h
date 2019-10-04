@@ -21,11 +21,4 @@ public:
 	
 	static constexpr uint32_t DRIVER_CTRL_PORT{ 0 };
 	static constexpr uint32_t OPERATOR_CTRL_PORT{ 1 };
-	
-	
-	static constexpr double DRIVE_BASE_WIDTH { 25.0 };
-	static constexpr double DRIVE_BASE_WIDTH_HALVED { DRIVE_BASE_WIDTH / 2.0 };
-
-	static constexpr double DRIVE_BASE_LENGTH { 25.0 };
-	static constexpr double DRIVE_BASE_LENGTH_HAVLED { DRIVE_BASE_LENGTH / 2.0 };
 };

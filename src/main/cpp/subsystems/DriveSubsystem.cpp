@@ -5,66 +5,51 @@
 
 #include <frc/smartdashboard/SmartDashboard.h>
 
-constexpr double PI{ 3.14159265359 };
 
 
-/* **************************************************************************************************
- *                                                                                                   *   
- * DriveModule class methods                                                                         *       
- *                                                                                                   *       
-  ****************************************************************************************************/ 
+constexpr double DRIVE_BASE_WIDTH { 25.0 };
+constexpr double DRIVE_BASE_WIDTH_HALVED { DRIVE_BASE_WIDTH / 2.0 };
 
-DriveModule::DriveModule(uint32_t drive_motor_id, uint32_t steer_motor_id, uint32_t steer_encoder_id)
-{
-	m_drive_motor.reset(new TalonSRX(drive_motor_id));
-	m_steer_motor.reset(new TalonSRX_PID(steer_motor_id));
-	m_steer_encoder.reset(new frc::AnalogInput(steer_encoder_id));
-	m_pid.reset(new frc::PIDController(0.03, 0.0, 0.0, m_steer_encoder.get(), m_steer_motor.get()));	
-	
-	m_pid->SetOutputRange(-1.0, 1.0);
-	m_pid->SetContinuous(true);
-	m_pid->Enable();
-}
+constexpr double DRIVE_BASE_LENGTH { 25.0 };
+constexpr double DRIVE_BASE_LENGTH_HAVLED { DRIVE_BASE_LENGTH / 2.0 };
 
-void DriveModule::Drive(double speed, double angle)
-{
-	m_pid->SetSetpoint(angle);
-	m_drive_motor->Set(ControlMode::PercentOutput, speed);
-}
+constexpr double TO_RAD { 180.0 / M_PI };
+constexpr double TO_DEG { M_PI / 180.0 };
 
-void DriveModule::Steer(double angle)
-{
-	m_pid->SetSetpoint(angle);
-}
-
-void DriveModule::SetMotorPercentOutput(double output)
-{
-	m_drive_motor->Set(ControlMode::PercentOutput, output);
-}
-
-
-
-/* **************************************************************************************************
- *                                                                                                   *   
- * SwerveDriveSubsystem class methods                                                                *       
- *                                                                                                   *       
-  ****************************************************************************************************/ 
 
 DriveSubsystem::DriveSubsystem()
 	: frc::Subsystem("SwerveDriveSubsystem")
 	, m_drive_mode(SwerveDriveMode::FieldOriented)
 	, m_speed_scale(1.0)
 {
-    m_left_fwd_module.reset(new DriveModule(
-        RobotMap::LEFT_FWD_DRIVE_MOTOR, RobotMap::LEFT_FWD_STEER_MOTOR, RobotMap::LEFT_FWD_STEER_ENCODER));
-    m_left_aft_module.reset(new DriveModule(
-        RobotMap::LEFT_AFT_DRIVE_MOTOR, RobotMap::LEFT_AFT_STEER_MOTOR, RobotMap::LEFT_AFT_STEER_ENCODER));
-    m_right_fwd_module.reset(new DriveModule(
-        RobotMap::RIGHT_FWD_DRIVE_MOTOR, RobotMap::RIGHT_FWD_STEER_MOTOR, RobotMap::RIGHT_FWD_STEER_ENCODER));
-    m_right_aft_module.reset(new DriveModule(
-        RobotMap::RIGHT_AFT_DRIVE_MOTOR, RobotMap::RIGHT_AFT_STEER_MOTOR, RobotMap::RIGHT_AFT_STEER_ENCODER));
+    InitializeSwerveModule(SwerveModulePosition::LeftForward,
+        RobotMap::LEFT_FWD_DRIVE_MOTOR, RobotMap::LEFT_FWD_STEER_MOTOR, RobotMap::LEFT_FWD_STEER_ENCODER);
+    InitializeSwerveModule(SwerveModulePosition::LeftAft,
+        RobotMap::LEFT_AFT_DRIVE_MOTOR, RobotMap::LEFT_AFT_STEER_MOTOR, RobotMap::LEFT_AFT_STEER_ENCODER);
+    InitializeSwerveModule(SwerveModulePosition::RightForward,
+        RobotMap::RIGHT_FWD_DRIVE_MOTOR, RobotMap::RIGHT_FWD_STEER_MOTOR, RobotMap::RIGHT_FWD_STEER_ENCODER);
+    InitializeSwerveModule(SwerveModulePosition::RightAft,
+        RobotMap::RIGHT_AFT_DRIVE_MOTOR, RobotMap::RIGHT_AFT_STEER_MOTOR, RobotMap::RIGHT_AFT_STEER_ENCODER);
 	
 	m_ahrs.reset(new AHRS(SPI::Port::kMXP));
+}
+
+void DriveSubsystem::InitializeSwerveModule(SwerveModulePosition position, 
+        uint32_t drive_motor_id, uint32_t steer_motor_id, uint32_t steer_encoder_id)
+{
+    size_t index = m_swerve_modules.size();
+    m_swerve_modules.push_back(std::make_unique<SwerveModule>(
+        position, drive_motor_id, steer_motor_id, steer_encoder_id));
+
+    SwerveModule * p_module = m_swerve_modules[index].get();
+
+    switch (position)
+    {
+        case SwerveModulePosition::LeftForward:     m_left_fwd_module = p_module;   break;
+        case SwerveModulePosition::LeftAft:         m_left_aft_module = p_module;   break;
+        case SwerveModulePosition::RightForward:    m_right_fwd_module = p_module;  break;
+        case SwerveModulePosition::RightAft:        m_right_aft_module = p_module;  break;
+    }
 }
 
 void DriveSubsystem::InitDefaultCommand()
@@ -89,10 +74,10 @@ void  DriveSubsystem::ShieldWall()
     // as below (unless a bigger, badder robot does actually push us).
     StopDriveMotors();
 
-    m_left_fwd_module->Steer(-0.25);
-    m_left_aft_module->Steer( 0.25);
-    m_right_fwd_module->Steer( 0.25);
-    m_right_aft_module->Steer(-0.25);
+    m_left_fwd_module->Steer(-45.0);
+    m_left_aft_module->Steer( 45.0);
+    m_right_fwd_module->Steer( 45.0);
+    m_right_aft_module->Steer(-45.0);
 }
 
 // Set all drive motor outputs to 0.0
@@ -138,45 +123,71 @@ void DriveSubsystem::CarDrive(double speed, double angle)
 // Called to commnad robot to drive in swerve mode. 
 void DriveSubsystem::SwerveDrive(double x, double y, double rot)
 {
-	static DriveValues speeds;
-	static DriveValues angles;
-	
-    // If we are in FieldOriented mode, add the yaw of the navX to the rotation input.
-	if (m_drive_mode == SwerveDriveMode::FieldOriented)
-		rot += m_ahrs->GetAngle();
+    float steer = x;
+    float drive = y;
 
-    // Determine speeds and angles for all modules.
-	SpeedAndAngle(x, y, rot, &speeds, &angles);
-	
-    // Command each module to drive with the calculated speed and angle.
-	m_left_fwd_module->Drive(speeds.lf * m_speed_scale, angles.lf);
-    m_left_aft_module->Drive(speeds.la * m_speed_scale, angles.la);
-    m_right_fwd_module->Drive(speeds.rf * m_speed_scale, angles.rf);
-    m_right_aft_module->Drive(speeds.ra * m_speed_scale, angles.ra);
+	if (m_drive_mode == SwerveDriveMode::FieldOriented) 
+    {
+		const double yaw = m_ahrs->GetAngle() * TO_DEG;
+		drive =  y * cos(yaw) + x * sin(yaw);
+		steer = -y * sin(yaw) + x * cos(yaw);
+	}
+
+	const double r = sqrt(pow(DRIVE_BASE_LENGTH, 2) + pow(DRIVE_BASE_WIDTH, 2));
+	double a = steer - rot * DRIVE_BASE_LENGTH / r;
+	double b = steer + rot * DRIVE_BASE_LENGTH / r;
+	double c = drive - rot * DRIVE_BASE_WIDTH  / r;
+	double d = drive + rot * DRIVE_BASE_WIDTH  / r;
+
+	if (d != 0 || b != 0) 
+		m_left_fwd_module->Steer(atan2(b, d) * TO_RAD);
+
+	if (a != 0 || d != 0) 
+		m_left_aft_module->Steer(atan2(a, d) * TO_RAD);
+
+	if (b != 0 || c != 0) 
+		m_right_fwd_module->Steer(atan2(b, c) * TO_RAD);
+
+	if (a != 0 || c != 0) 
+		m_right_aft_module->Steer(atan2(a, c) * TO_RAD);
+
+
+
+	DriveValues<double> output(0.0);
+	output.lf = sqrt(pow(b, 2) + pow(d, 2));
+	output.la = sqrt(pow(a, 2) + pow(d, 2));
+	output.rf = sqrt(pow(b, 2) + pow(c, 2));
+	output.ra = sqrt(pow(a, 2) + pow(c, 2));
+
+    NormalizeOutput(output);
+
+	m_left_fwd_module->SetMotorPercentOutput(output.lf  * m_speed_scale);
+	m_left_aft_module->SetMotorPercentOutput(output.la  * m_speed_scale);
+	m_right_fwd_module->SetMotorPercentOutput(output.rf * m_speed_scale);
+	m_right_aft_module->SetMotorPercentOutput(output.ra * m_speed_scale);
 }
 
-// Called to calculate all the required drive speeds and wheel angles for the given input.
-void DriveSubsystem::SpeedAndAngle(double x, double y, double rot, DriveValues * speeds, DriveValues * angles)
+void DriveSubsystem::NormalizeOutput(DriveValues<double> & output)
 {
-	//static double r = std::sqrt(DRIVE_BASE_WIDTH_HALVED + DRIVE_BASE_LENGTH_HALVED);
-	static double r = std::sqrt(
-			(RobotMap::DRIVE_BASE_WIDTH * RobotMap::DRIVE_BASE_WIDTH) + 
-			(RobotMap::DRIVE_BASE_LENGTH * RobotMap::DRIVE_BASE_LENGTH));
-	
-	double a = x - rot * (RobotMap::DRIVE_BASE_LENGTH / r);
-	double b = x + rot * (RobotMap::DRIVE_BASE_LENGTH / r);
-	double c = y - rot * (RobotMap::DRIVE_BASE_WIDTH / r);
-	double d = y + rot * (RobotMap::DRIVE_BASE_WIDTH / r);
-	
-	speeds->lf = std::sqrt((b * b) + (c * c));
-	speeds->la = std::sqrt((a * a) + (c * c));
-	speeds->rf = std::sqrt((b * b) + (d * d));
-	speeds->ra = std::sqrt((a * a) + (d * d));
-	
-	angles->lf = std::atan2(b, c) / PI;
-	angles->la = std::atan2(a, c) / PI;
-	angles->rf = std::atan2(b, d) / PI;
-	angles->ra = std::atan2(a, d) / PI;
+	double max_output = 0.0;
+    double fabs_output;
+    for (auto d : output.values)
+    {
+        fabs_output = fabs(d);
+        if (fabs_output > max_output)
+            max_output = fabs_output;
+    }
+
+	if (max_output > 1 || max_output < -1) 
+    {
+		output.lf /= max_output;
+		output.la /= max_output;
+		output.rf /= max_output;
+		output.ra /= max_output;
+	} 
+
+	output.rf = -output.rf;
+	output.ra = -output.ra;
 }
 
 // Display steering encoder values on the dashboard.

@@ -156,7 +156,7 @@ void Robot::TeleopPeriodic()
             // right stick (x-axis) can be used to cause the robot to rotate.
             // The right stick has priority meaning that if there is an input detected
             // from the right stick then the triggers are ignored and the right stick is used.
-            m_drive_subsystem.SwerveDrive(m_drive_ctrl->GetLeftStickXDB(), m_drive_ctrl->GetLeftStickYDB(),
+            m_drive_subsystem.SwerveDrive(m_drive_ctrl->GetLeftStickXDB(), -(m_drive_ctrl->GetLeftStickYDB()),
                 right_stick_x == 0.0 ? right_stick_x : m_drive_ctrl->GetTriggersCoercedDB());
             break;
 		case DriveMode::Tank:
