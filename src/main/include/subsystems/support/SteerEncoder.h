@@ -8,5 +8,5 @@ class SteerEncoder : public frc::AnalogInput
 public:
     SteerEncoder(uint32_t encoder_id);
 
-    double PIDGet() override { return GetAverageVoltage(); }
+    double PIDGet() override { return GetValue(); }
 };
